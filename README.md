@@ -28,3 +28,8 @@ $ rm ./update
 $ rm ./updater
 ```
 
+## Common Issues
+
+* Make sure you run the script from the root of your repo, regardless of whether you symlink this
+repo into your project, or clone it into it. The script uses the current working directory to find
+the update scripts.
