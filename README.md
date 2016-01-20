@@ -13,16 +13,18 @@ Firstly you'll need to download the Pimcore git repository somewhere
 
 You'll also need to download the version of Pimcore you want to upgrade to and put that somewhere.
 
+Then, download this repo somewhere too.
+
 Then:
 
 ```
 $ cd <path to your pimcore webroot>/
 $ rm -rf ./pimcore
 $ cp -r <path to pimcore version you want>/pimcore ./
-$ cp -r <path to pimcore git repo>/update ./
-$ git clone https://github.com/SeerUK/pimcore-manual-updater ./updater
+$ ln -s <path to pimcore git repo>/update ./
+$ ln -s <path to this git repo> ./updater
 $ ./updater/updater <current revision> <target revision>
-$ rm -rf ./update
-$ rm -rf ./updater
+$ rm ./update
+$ rm ./updater
 ```
 
