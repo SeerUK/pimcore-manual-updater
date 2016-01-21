@@ -136,8 +136,14 @@ final class Updater
             ));
         }
 
-        $paths = glob($updatePath . "/[^0-9]*/", GLOB_ONLYDIR);
-        $archivePaths = glob($updatePath . "/**/[^0-9]*/", GLOB_ONLYDIR);
+        $paths = glob($updatePath . "/*", GLOB_ONLYDIR);
+        $archivePaths = glob($updatePath . "/**/*", GLOB_ONLYDIR);
+
+        foreach ($paths as $key => $path) {
+            if (!preg_match("/^[0-9]/", basename($path))) {
+                unset($paths[$key]);
+            }
+        }
 
         $paths = array_merge($paths, $archivePaths);
 
