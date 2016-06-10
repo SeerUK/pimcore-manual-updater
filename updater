@@ -1,4 +1,168 @@
 #!/usr/bin/env php
 <?php
 
-echo "Hello world!";
+try {
+    $updater = new Updater();
+    $updater->doUpdate($argv);
+} catch (Exception $e) {
+    die("[ERR] " . $e->getMessage());
+}
+
+/**
+ * Updater
+ *
+ * @author Elliot Wright <elliot@elliotwright.co>
+ */
+final class Updater
+{
+    /**
+     * Run updates
+     *
+     * @param array $args
+     *
+     * @return void
+     */
+    public function doUpdate(array $args)
+    {
+        // Attempt to start Pimcore
+        $autoloader = realpath(getcwd() . "/vendor/autoload.php");
+        $startup = realpath(getcwd() . "/pimcore/cli/startup.php");
+
+        if (!$startup) {
+            throw new LogicException("Could not find 'startup.php' file.");
+        }
+
+        if ($autoloader) {
+            require_once $autoloader;
+        }
+
+        require_once $startup;
+
+        $currentRev = isset($args[1]) ? intval($args[1]) : null;
+        $targetRev = isset($args[2]) ? intval($args[2]) : null;
+
+        if (!$currentRev || !$targetRev) {
+            throw new InvalidArgumentException("Missing current revision and/or target revision.");
+        }
+
+        $paths = $this->getUpdatePaths($currentRev, $targetRev);
+
+        $this->runUpdates($paths);
+    }
+
+    /**
+     * Run udpates in the given paths
+     *
+     * @param array $paths
+     *
+     * @return void
+     */
+    private function runUpdates(array $paths)
+    {
+        // Run certain scripts to avoid known upgrade issues...
+        if (isset($paths["2740"])) {
+            $scripts = $this->getScriptPaths($paths["2740"]);
+
+            $this->runUpdate(basename($paths["2740"]), $scripts);
+        }
+
+        foreach ($paths as $path) {
+            $scripts = $this->getScriptPaths($path);
+
+            $this->runUpdate(basename($path), $scripts);
+        };
+    }
+
+    /**
+     * Run a single update revision (can be many scripts)
+     *
+     * @param int $revision
+     * @param array $scripts
+     *
+     * @return void
+     */
+    private function runUpdate($revision, array $scripts)
+    {
+        echo sprintf("[INF] Running update revision '%s'... ", $revision);
+
+        // Ensure only known scripts are ran, and ensure they run in the right order...
+
+        if (isset($scripts["preupdate.php"])) {
+            require_once $scripts["preupdate.php"];
+        }
+
+        if (isset($scripts["postupdate.php"])) {
+            require_once $scripts["postupdate.php"];
+        }
+
+        echo "OK\n";
+    }
+
+    /**
+     * Get script paths
+     *
+     * @param string $path
+     *
+     * @return array
+     */
+    private function getScriptPaths($path)
+    {
+        $scripts = array_filter(glob($path . "*.php"), "is_file");
+
+        return array_reduce($scripts, function($aggregate, $script) {
+            $aggregate[basename($script)] = $script;
+
+            return $aggregate;
+        });
+    }
+
+    /**
+     * Get update paths
+     *
+     * @param int $currentRev
+     * @param int $targetRev
+     *
+     * @return array
+     */
+    private function getUpdatePaths($currentRev, $targetRev)
+    {
+        $updatePath = realpath(getcwd() . "/updater/update");
+
+        if (!file_exists($updatePath)) {
+            throw new InvalidArgumentException(sprintf(
+                "Could not find 'update' folder. Are you running this from the right folder? " .
+                "Current working directory is '%s'",
+                getcwd()
+            ));
+        }
+
+        $paths = glob($updatePath . "/*", GLOB_ONLYDIR);
+        $archivePaths = glob($updatePath . "/**/*", GLOB_ONLYDIR);
+
+        foreach ($paths as $key => $path) {
+            if (!preg_match("/^[0-9]/", basename($path))) {
+                unset($paths[$key]);
+            }
+        }
+
+        $paths = array_merge($paths, $archivePaths);
+
+        $result = array_reduce($paths, function($aggregate, $path) use ($currentRev, $targetRev) {
+            $revision = basename($path);
+
+            if (is_numeric($revision)) {
+                $revision = intval($revision);
+
+                if ($revision >= $currentRev && $revision <= $targetRev) {
+                    $aggregate[$revision] = $path;
+                }
+            }
+
+            return $aggregate;
+        }, []);
+
+        ksort($result, SORT_NUMERIC);
+
+        return $result;
+    }
+}
