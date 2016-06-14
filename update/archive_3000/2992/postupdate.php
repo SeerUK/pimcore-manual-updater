@@ -13,7 +13,7 @@
  * @license    http://www.pimcore.org/license     New BSD License
  */
 
-function sendQuery2992 ($sql) {
+function sendQuery ($sql) {
     try {
         $db = Pimcore_Resource::get();
         $db->query($sql);
@@ -36,6 +36,6 @@ $tableNames = array(
 );
 
 foreach ($tableNames as $tableName) {
-    sendQuery2992("ALTER TABLE `" . $tableName . "` ADD COLUMN `creationDate` bigint(20) unsigned DEFAULT 0;");
-    sendQuery2992("ALTER TABLE `" . $tableName . "` ADD COLUMN `modificationDate` bigint(20) unsigned DEFAULT 0;");
+    sendQuery("ALTER TABLE `" . $tableName . "` ADD COLUMN `creationDate` bigint(20) unsigned DEFAULT 0;");
+    sendQuery("ALTER TABLE `" . $tableName . "` ADD COLUMN `modificationDate` bigint(20) unsigned DEFAULT 0;");
 }
